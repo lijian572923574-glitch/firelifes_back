@@ -25,7 +25,7 @@
     "@midwayjs/mock": "^4.0.0",
     "@types/jest": "^29.2.0",
     "@types/node": "20",
-    "cross-env": "^7.0.3",
+    "cross-env": "^10.1.0",
     "jest": "^29.7.0",
     "mwts": "^2.0.4",
     "mwtsc": "^1.4.0",
@@ -36,7 +36,9 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "start": "cross-env NODE_ENV=production node ./bootstrap.js",
+    "start": "cross-env NODE_ENV=prod node ./bootstrap.js",
+    "start:sit": "cross-env NODE_ENV=sit node ./bootstrap.js",
+    "start:prod": "cross-env NODE_ENV=prod node ./bootstrap.js",
     "dev": "cross-env NODE_ENV=local mwtsc --watch --run @midwayjs/mock/app.js",
     "test": "cross-env NODE_ENV=unittest jest",
     "cov": "jest --coverage",
