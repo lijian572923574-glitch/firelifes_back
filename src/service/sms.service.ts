@@ -107,30 +107,41 @@ export class SmsService {
   private async sendSmsViaTencent(phone: string, code: string): Promise<void> {
     const { appId, appKey, signName, templateId } = this.tencentSmsConfig;
 
-    const SmsSender = require('qcloudsms-js').SmsSingleSender;
+    // 如果配置不完整，直接跳过
+    if (!appId || !appKey || !signName || !templateId) {
+      console.log('ℹ️ 腾讯云短信配置不完整，跳过发送');
+      return;
+    }
 
-    const sender = new SmsSender(appId, appKey);
+    try {
+      // 尝试加载腾讯云短信包
+      const SmsSender = require('qcloudsms-js').SmsSingleSender;
+      
+      const sender = new SmsSender(appId, appKey);
+      const params = [code, '5'];
 
-    const params = [code, '5'];
-
-    return new Promise((resolve, reject) => {
-      sender.sendWithParam(
-        '86',
-        phone,
-        parseInt(templateId),
-        params,
-        signName,
-        '',
-        '',
-        (err: any, result: any) => {
-          if (err) {
-            reject(err);
-          } else {
-            console.log(`✅ 腾讯云短信发送成功: ${JSON.stringify(result)}`);
-            resolve(result);
+      return new Promise((resolve, reject) => {
+        sender.sendWithParam(
+          '86',
+          phone,
+          parseInt(templateId),
+          params,
+          signName,
+          '',
+          '',
+          (err: any, result: any) => {
+            if (err) {
+              reject(err);
+            } else {
+              console.log(`✅ 腾讯云短信发送成功: ${JSON.stringify(result)}`);
+              resolve(result);
+            }
           }
-        }
-      );
-    });
+        );
+      });
+    } catch (error) {
+      console.log('ℹ️ 腾讯云短信包未安装或配置错误，跳过发送:', error.message);
+      return;
+    }
   }
 }
