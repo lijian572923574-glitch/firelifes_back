@@ -2,7 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeor
 
 export type SmsCodeType = 'register' | 'login' | 'reset-password';
 
-@Entity({ schema: 'firelifes', name: 'sms_codes', comment: '短信验证码表' })
+@Entity({ name: 'sms_codes', comment: '短信验证码表' })
 export class SmsCode {
   @PrimaryGeneratedColumn('increment', { comment: 'ID，主键自增' })
   id: number;

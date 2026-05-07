@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
 
-@Entity({ schema: 'firelifes', name: 'ads', comment: '广告表' })
+@Entity({ name: 'ads', comment: '广告表' })
 export class Ad {
   @PrimaryGeneratedColumn('increment', { comment: 'ID，主键自增' })
   id: number;

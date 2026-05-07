@@ -20,7 +20,7 @@ export class SmsService {
 
   private readonly CODE_EXPIRES_MINUTES = 5;
   private readonly SEND_INTERVAL_SECONDS = 60;
-  private readonly MAX_SEND_PER_DAY = 10;
+  private readonly MAX_SEND_PER_DAY = 100;
 
   async sendCode(phone: string, type: SmsCodeType): Promise<string> {
     const now = new Date();

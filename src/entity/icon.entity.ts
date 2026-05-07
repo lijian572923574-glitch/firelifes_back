@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-@Entity({ schema: 'firelifes', name: 'icons', comment: '图标表，支持用户自定义图标' })
+@Entity({ name: 'icons', comment: '图标表，支持用户自定义图标' })
 export class Icon {
   @PrimaryGeneratedColumn('increment', { comment: '图标ID，主键自增' })
   id: number;

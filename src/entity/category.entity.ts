@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryColumn } from 'typeorm';
 
-@Entity({ schema: 'firelifes', name: 'categories', comment: '二级分类（具体分类）表' })
+@Entity({ name: 'categories', comment: '二级分类（具体分类）表' })
 export class Category {
   @PrimaryColumn({ length: 50, comment: '分类ID，主键' })
   id: string;

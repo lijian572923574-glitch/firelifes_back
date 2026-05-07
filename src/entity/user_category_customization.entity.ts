@@ -1,7 +1,7 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { UserIcon } from './user_icon.entity';
 
-@Entity({ schema: 'firelifes', name: 'user_category_customizations', comment: '用户分类定制表' })
+@Entity({ name: 'user_category_customizations', comment: '用户分类定制表' })
 export class UserCategoryCustomization {
   @PrimaryGeneratedColumn('increment', { comment: '记录ID' })
   id: number;

@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-@Entity({ schema: 'firelifes', name: 'category_groups', comment: '一级分类（分类分组）表' })
+@Entity({ name: 'category_groups', comment: '一级分类（分类分组）表' })
 export class CategoryGroup {
   @PrimaryGeneratedColumn('increment', { comment: '分组ID，主键自增' })
   id: number;

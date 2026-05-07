@@ -36,13 +36,13 @@ export default {
     dataSource: {
       default: {
         type: 'postgres',
-        host: process.env.DB_HOST || 'localhost',
+        host: process.env.DB_HOST || '111.230.101.3',
         port: parseInt(process.env.DB_PORT || '5432'),
-        username: process.env.DB_USERNAME || '',
-        password: process.env.DB_PASSWORD || '',
+        username: process.env.DB_USERNAME || 'firelifes_sit',
+        password: process.env.DB_PASSWORD || 'Lj@pg1991',
         database: process.env.DB_NAME || 'firelifes_sit',
         schema: 'firelifes',
-        synchronize: false,
+        synchronize: true,
         logging: true,
         entities: [Record, Category, CategoryGroup, Icon, User, UserCategoryCustomization, UserCategoryGroup, UserIcon, SmsCode, Ad],
       },

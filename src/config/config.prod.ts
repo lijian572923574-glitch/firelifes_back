@@ -36,11 +36,11 @@ export default {
     dataSource: {
       default: {
         type: 'postgres',
-        host: process.env.DB_HOST,
+        host: process.env.DB_HOST || '111.230.101.3',
         port: parseInt(process.env.DB_PORT || '5432'),
-        username: process.env.DB_USERNAME,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
+        username: process.env.DB_USERNAME || 'firelifes_prod',
+        password: process.env.DB_PASSWORD || 'Lj@pg1991',
+        database: process.env.DB_NAME || 'firelifes_prod',
         schema: 'firelifes',
         synchronize: false,
         logging: false,
