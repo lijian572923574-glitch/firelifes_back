@@ -353,4 +353,57 @@ export class CategoryService {
       throw error;
     }
   }
+
+  async getUserGroups(userId: number) {
+    return this.userCategoryGroupModel.find({
+      where: { userId, isEnabled: true },
+      order: { sortOrder: 'ASC' },
+    });
+  }
+
+  async createUserGroup(userId: number, data: { name: string }) {
+    const maxGroup = await this.userCategoryGroupModel.findOne({
+      where: { userId },
+      order: { sortOrder: 'DESC' },
+    });
+    const sortOrder = maxGroup ? maxGroup.sortOrder + 1 : 0;
+
+    const group = this.userCategoryGroupModel.create({
+      userId,
+      name: data.name,
+      sortOrder,
+      isEnabled: true,
+    });
+    return this.userCategoryGroupModel.save(group);
+  }
+
+  async updateUserGroup(userId: number, id: number, data: { name: string }) {
+    const group = await this.userCategoryGroupModel.findOne({
+      where: { id, userId },
+    });
+    if (!group) {
+      throw new Error('分类不存在');
+    }
+    group.name = data.name;
+    return this.userCategoryGroupModel.save(group);
+  }
+
+  async deleteUserGroup(userId: number, id: number) {
+    const group = await this.userCategoryGroupModel.findOne({
+      where: { id, userId },
+    });
+    if (!group) {
+      throw new Error('分类不存在');
+    }
+
+    const childCategories = await this.customizationModel.count({
+      where: { groupId: id, userId, isEnabled: true },
+    });
+    if (childCategories > 0) {
+      throw new Error('请先删除该分类下的子分类');
+    }
+
+    group.isEnabled = false;
+    await this.userCategoryGroupModel.save(group);
+  }
 }
