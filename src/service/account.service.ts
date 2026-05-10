@@ -125,12 +125,18 @@ export class AccountService {
       order: { order: 'DESC' }
     });
 
+    // 负债类余额强制转负数
+    let balance = data.balance;
+    if (data.type === 'liability' && balance > 0) {
+      balance = -Math.abs(balance);
+    }
+
     const account = this.accountModel.create({
       userId,
       name: data.name,
       icon: data.icon,
       type: data.type,
-      balance: data.balance,
+      balance: balance,
       description: data.description,
       isDefault: false,
       order: (lastAccount?.order || 0) + 1,
@@ -157,10 +163,16 @@ export class AccountService {
       return null;
     }
 
+    // 负债类余额强制转负数
+    let balance = data.balance;
+    if (data.type === 'liability' && balance > 0) {
+      balance = -Math.abs(balance);
+    }
+
     account.name = data.name;
     account.icon = data.icon;
     account.type = data.type;
-    account.balance = data.balance;
+    account.balance = balance;
     account.description = data.description;
 
     const updatedAccount = await this.accountModel.save(account);
