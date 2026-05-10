@@ -6,6 +6,7 @@ import * as jwt from 'jsonwebtoken';
 import { User } from '../entity/user.entity';
 import { SmsService } from './sms.service';
 import { CategoryService } from './category.service';
+import { AccountService } from './account.service';
 
 export interface ILoginOptions {
   username?: string;
@@ -38,6 +39,9 @@ export class AuthService {
 
   @Inject()
   categoryService: CategoryService;
+
+  @Inject()
+  accountService: AccountService;
 
   private readonly JWT_SECRET = process.env.JWT_SECRET || 'firelifes_jwt_secret_key_2024';
   private readonly JWT_EXPIRES_IN = '7d';
@@ -77,6 +81,10 @@ export class AuthService {
     console.log(`[注册] 开始初始化用户 ${user.id} 的分类数据`);
     await this.categoryService.initUserCategories(user.id);
     console.log(`[注册] 用户 ${user.id} 分类初始化完成`);
+
+    console.log(`[注册] 开始创建用户 ${user.id} 的默认账户`);
+    await this.accountService.createDefaultAccounts(user.id);
+    console.log(`[注册] 用户 ${user.id} 默认账户创建完成`);
 
     const token = this.generateToken({
       userId: user.id,
@@ -122,6 +130,9 @@ export class AuthService {
         console.log(`[验证码登录] 用户创建成功，ID: ${user.id}`);
         await this.categoryService.initUserCategories(user.id);
         console.log(`[验证码登录] 用户 ${user.id} 分类初始化完成`);
+        console.log(`[验证码登录] 开始创建用户 ${user.id} 的默认账户`);
+        await this.accountService.createDefaultAccounts(user.id);
+        console.log(`[验证码登录] 用户 ${user.id} 默认账户创建完成`);
       }
     } else if (password && (username || phone)) {
       user = await this.userModel.findOne({
@@ -187,6 +198,9 @@ export class AuthService {
       console.log(`[微信登录] 用户创建成功，ID: ${user.id}`);
       await this.categoryService.initUserCategories(user.id);
       console.log(`[微信登录] 用户 ${user.id} 分类初始化完成`);
+      console.log(`[微信登录] 开始创建用户 ${user.id} 的默认账户`);
+      await this.accountService.createDefaultAccounts(user.id);
+      console.log(`[微信登录] 用户 ${user.id} 默认账户创建完成`);
     } else if (wechatInfo) {
       if (wechatInfo.unionid) user.wechatUnionid = wechatInfo.unionid;
       if (wechatInfo.nickname) user.nickname = wechatInfo.nickname;
