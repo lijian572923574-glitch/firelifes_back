@@ -192,4 +192,119 @@ export class CategoryController {
       };
     }
   }
+
+  /**
+   * 获取指定大类下的子分类列表
+   */
+  @Get('/group/:groupId')
+  async getCategoriesByGroup(@Param('groupId') groupId: string) {
+    try {
+      const userId = this.ctx.state.user?.userId;
+      if (!userId) {
+        return {
+          success: false,
+          message: '请先登录',
+        };
+      }
+
+      const categories = await this.categoryService.getCategoriesByGroup(userId, parseInt(groupId));
+      return {
+        success: true,
+        message: '获取成功',
+        data: categories,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: '获取失败',
+        error: (error as Error).message,
+      };
+    }
+  }
+
+  /**
+   * 创建子分类
+   */
+  @Post('/user')
+  async createCategory(@Body() body: { name: string; groupId: number; iconId: number; type: 'income' | 'expense' }) {
+    try {
+      const userId = this.ctx.state.user?.userId;
+      if (!userId) {
+        return {
+          success: false,
+          message: '请先登录',
+        };
+      }
+
+      const category = await this.categoryService.createCategory(userId, body);
+      return {
+        success: true,
+        message: '创建成功',
+        data: category,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: '创建失败',
+        error: (error as Error).message,
+      };
+    }
+  }
+
+  /**
+   * 更新子分类
+   */
+  @Put('/user/:id')
+  async updateCategory(@Param('id') id: string, @Body() body: { name: string; iconId: number }) {
+    try {
+      const userId = this.ctx.state.user?.userId;
+      if (!userId) {
+        return {
+          success: false,
+          message: '请先登录',
+        };
+      }
+
+      const category = await this.categoryService.updateCategory(userId, parseInt(id), body);
+      return {
+        success: true,
+        message: '更新成功',
+        data: category,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: '更新失败',
+        error: (error as Error).message,
+      };
+    }
+  }
+
+  /**
+   * 删除子分类
+   */
+  @Del('/user/:id')
+  async deleteCategory(@Param('id') id: string) {
+    try {
+      const userId = this.ctx.state.user?.userId;
+      if (!userId) {
+        return {
+          success: false,
+          message: '请先登录',
+        };
+      }
+
+      await this.categoryService.deleteCategory(userId, parseInt(id));
+      return {
+        success: true,
+        message: '删除成功',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: '删除失败',
+        error: (error as Error).message,
+      };
+    }
+  }
 }

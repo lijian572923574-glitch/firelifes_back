@@ -406,4 +406,67 @@ export class CategoryService {
     group.isEnabled = false;
     await this.userCategoryGroupModel.save(group);
   }
+
+  /**
+   * 获取指定大类下的子分类列表
+   */
+  async getCategoriesByGroup(userId: number, groupId: number) {
+    return this.customizationModel.find({
+      where: { userId, groupId, isEnabled: true },
+      relations: ['icon'],
+      order: { sortOrder: 'ASC' },
+    });
+  }
+
+  /**
+   * 创建子分类
+   */
+  async createCategory(userId: number, data: { name: string; groupId: number; iconId: number; type: 'income' | 'expense' }) {
+    const maxCategory = await this.customizationModel.findOne({
+      where: { userId, groupId: data.groupId },
+      order: { sortOrder: 'DESC' },
+    });
+    const sortOrder = maxCategory ? maxCategory.sortOrder + 1 : 0;
+
+    const category = this.customizationModel.create({
+      userId,
+      name: data.name,
+      groupId: data.groupId,
+      iconId: data.iconId,
+      type: data.type,
+      sortOrder,
+      isEnabled: true,
+      isUserCreated: true,
+    });
+    return this.customizationModel.save(category);
+  }
+
+  /**
+   * 更新子分类
+   */
+  async updateCategory(userId: number, id: number, data: { name: string; iconId: number }) {
+    const category = await this.customizationModel.findOne({
+      where: { id, userId },
+    });
+    if (!category) {
+      throw new Error('子分类不存在');
+    }
+    category.name = data.name;
+    category.iconId = data.iconId;
+    return this.customizationModel.save(category);
+  }
+
+  /**
+   * 删除子分类
+   */
+  async deleteCategory(userId: number, id: number) {
+    const category = await this.customizationModel.findOne({
+      where: { id, userId },
+    });
+    if (!category) {
+      throw new Error('子分类不存在');
+    }
+    category.isEnabled = false;
+    await this.customizationModel.save(category);
+  }
 }
