@@ -2,6 +2,7 @@ import { Provide } from '@midwayjs/core';
 import { InjectEntityModel } from '@midwayjs/typeorm';
 import { Repository } from 'typeorm';
 import { Account, AccountType } from '../entity/account.entity';
+import { AccountAdjustment } from '../entity/account_adjustment.entity';
 
 export interface AccountRequest {
   name: string;
@@ -9,6 +10,11 @@ export interface AccountRequest {
   type: AccountType;
   balance: number;
   description?: string;
+}
+
+export interface AdjustBalanceRequest {
+  newBalance: number;
+  remark?: string;
 }
 
 export interface DefaultAccountConfig {
@@ -31,28 +37,6 @@ const DEFAULT_ACCOUNTS: Omit<DefaultAccountConfig, 'id' | 'userId' | 'createdAt'
     balance: 0,
     description: '日常现金备用',
     order: 1,
-    isDefault: true,
-    isVisible: true,
-    isDeleted: false
-  },
-  {
-    name: '折旧资产',
-    icon: '📱',
-    type: 'depreciable_asset',
-    balance: 0,
-    description: '手机、电脑等折旧物品',
-    order: 2,
-    isDefault: true,
-    isVisible: true,
-    isDeleted: false
-  },
-  {
-    name: '固定资产',
-    icon: '🏠',
-    type: 'fixed_asset',
-    balance: 0,
-    description: '房产、车位等高价值物品',
-    order: 3,
     isDefault: true,
     isVisible: true,
     isDeleted: false
@@ -80,6 +64,9 @@ const transformAccounts = (accounts: Account[]) => {
 export class AccountService {
   @InjectEntityModel(Account)
   accountModel: Repository<Account>;
+
+  @InjectEntityModel(AccountAdjustment)
+  accountAdjustmentModel: Repository<AccountAdjustment>;
 
   /**
    * 获取用户的所有账户
@@ -241,5 +228,74 @@ export class AccountService {
       }
     });
     return count > 0;
+  }
+
+  /**
+   * 调整账户余额
+   */
+  async adjustBalance(
+    userId: number,
+    accountId: number,
+    data: AdjustBalanceRequest
+  ): Promise<{ account: Account; adjustment: AccountAdjustment }> {
+    const account = await this.accountModel.findOne({
+      where: { id: accountId, userId, isDeleted: false }
+    });
+
+    if (!account) {
+      throw new Error('账户不存在');
+    }
+
+    const oldBalance = account.balance;
+    const newBalance = data.newBalance;
+    const adjustmentAmount = newBalance - oldBalance;
+
+    // 更新账户余额
+    account.balance = newBalance;
+    await this.accountModel.save(account);
+
+    // 创建调整记录
+    const adjustment = this.accountAdjustmentModel.create({
+      userId,
+      accountId,
+      oldBalance,
+      newBalance,
+      adjustmentAmount,
+      remark: data.remark
+    });
+    await this.accountAdjustmentModel.save(adjustment);
+
+    return {
+      account: transformAccount(account) as any,
+      adjustment: {
+        ...adjustment,
+        id: String(adjustment.id),
+        userId: String(adjustment.userId),
+        accountId: String(adjustment.accountId),
+        createdAt: adjustment.createdAt.toISOString(),
+        updatedAt: adjustment.updatedAt.toISOString()
+      }
+    };
+  }
+
+  /**
+   * 获取账户调整记录
+   */
+  async getAdjustmentsByAccountId(
+    userId: number,
+    accountId: number
+  ): Promise<AccountAdjustment[]> {
+    const adjustments = await this.accountAdjustmentModel.find({
+      where: { userId, accountId },
+      order: { createdAt: 'DESC' }
+    });
+    return adjustments.map(adj => ({
+      ...adj,
+      id: String(adj.id),
+      userId: String(adj.userId),
+      accountId: String(adj.accountId),
+      createdAt: adj.createdAt.toISOString(),
+      updatedAt: adj.updatedAt.toISOString()
+    } as any));
   }
 }

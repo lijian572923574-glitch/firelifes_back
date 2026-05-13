@@ -1,6 +1,6 @@
 import { Entity, Column, PrimaryGeneratedColumn, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-export type AccountType = 'cash' | 'investment' | 'fixed_asset' | 'depreciable_asset' | 'liability';
+export type AccountType = 'cash' | 'fixed_asset' | 'depreciable_asset' | 'liability';
 
 @Entity({ name: 'accounts', comment: '账户表' })
 @Index(['userId', 'isDeleted'])

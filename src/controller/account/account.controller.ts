@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Del, Inject, Body, Param } from '@midwayjs/core';
 import type { Context } from '@midwayjs/koa';
 import { AccountService } from '../../service/account.service';
-import type { AccountRequest } from '../../service/account.service';
+import type { AccountRequest, AdjustBalanceRequest } from '../../service/account.service';
 import { Account } from '../../entity/account.entity';
 
 export interface IApiResponse<T = any> {
@@ -186,6 +186,78 @@ export class AccountController {
       return {
         success: true,
         message: '删除成功'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: (error as Error).message
+      };
+    }
+  }
+
+  /**
+   * 调整账户余额
+   */
+  @Post('/:id/adjust')
+  async adjustBalance(
+    @Param('id') id: string,
+    @Body() data: AdjustBalanceRequest
+  ): Promise<IApiResponse<any>> {
+    try {
+      const userId = this.ctx.state.user?.userId;
+      if (!userId) {
+        return {
+          success: false,
+          message: '请先登录'
+        };
+      }
+
+      if (data.newBalance === undefined || data.newBalance === null) {
+        return {
+          success: false,
+          message: '请输入新余额'
+        };
+      }
+
+      const result = await this.accountService.adjustBalance(
+        userId,
+        Number(id),
+        data
+      );
+      return {
+        success: true,
+        data: result,
+        message: '调整成功'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: (error as Error).message
+      };
+    }
+  }
+
+  /**
+   * 获取账户调整记录
+   */
+  @Get('/:id/adjustments')
+  async getAdjustments(@Param('id') id: string): Promise<IApiResponse<any[]>> {
+    try {
+      const userId = this.ctx.state.user?.userId;
+      if (!userId) {
+        return {
+          success: false,
+          message: '请先登录'
+        };
+      }
+
+      const adjustments = await this.accountService.getAdjustmentsByAccountId(
+        userId,
+        Number(id)
+      );
+      return {
+        success: true,
+        data: adjustments
       };
     } catch (error) {
       return {
