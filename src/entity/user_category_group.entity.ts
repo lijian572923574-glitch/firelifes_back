@@ -17,6 +17,8 @@ export class UserCategoryGroup {
   @Column({ name: 'is_enabled', type: 'boolean', default: true, comment: '是否启用' })
   isEnabled: boolean;
 
+  isUserCreated: boolean;
+
   @CreateDateColumn({ name: 'created_at', comment: '创建时间' })
   createdAt: Date;
 

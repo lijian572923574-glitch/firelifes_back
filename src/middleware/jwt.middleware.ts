@@ -13,7 +13,14 @@ export class JwtMiddleware implements IMiddleware<Context, NextFunction> {
     const publicPaths = ['/auth/login', '/auth/register', '/auth/send-sms', '/health', '/', '/ads/splash'];
     const isPublic = publicPaths.some(p => path === p || path.startsWith(p + '/'));
     if (isPublic) return false;
-    if (path.startsWith('/api/category/') && !path.startsWith('/api/category/user')) return false;
+    
+    // 排除需要登录的 category 路径：/api/category/group/ 和 /api/category/user/
+    if (path.startsWith('/api/category/') && 
+        !path.startsWith('/api/category/user') && 
+        !path.startsWith('/api/category/group/')) {
+      return false;
+    }
+    
     return true;
   }
 

@@ -168,6 +168,32 @@ export class CategoryController {
     }
   }
 
+  @Post('/user/groups/:id/toggle')
+  async toggleUserGroup(@Param('id') id: string) {
+    try {
+      const userId = this.ctx.state.user?.userId;
+      if (!userId) {
+        return {
+          success: false,
+          message: '请先登录',
+        };
+      }
+
+      const group = await this.categoryService.toggleUserGroup(userId, parseInt(id));
+      return {
+        success: true,
+        message: '操作成功',
+        data: group,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: '操作失败',
+        error: (error as Error).message,
+      };
+    }
+  }
+
   @Del('/user/groups/:id')
   async deleteUserGroup(@Param('id') id: string) {
     try {
@@ -275,6 +301,32 @@ export class CategoryController {
       return {
         success: false,
         message: '更新失败',
+        error: (error as Error).message,
+      };
+    }
+  }
+
+  @Post('/user/:id/toggle')
+  async toggleCategory(@Param('id') id: string) {
+    try {
+      const userId = this.ctx.state.user?.userId;
+      if (!userId) {
+        return {
+          success: false,
+          message: '请先登录',
+        };
+      }
+
+      const category = await this.categoryService.toggleCategory(userId, parseInt(id));
+      return {
+        success: true,
+        message: '操作成功',
+        data: category,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: '操作失败',
         error: (error as Error).message,
       };
     }

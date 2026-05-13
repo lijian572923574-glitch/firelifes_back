@@ -148,11 +148,21 @@ export class UserService {
     return this.updateUserCategory(userId, categoryId, { isEnabled: false });
   }
 
+  private defaultGroupNames = ['饮食消费', '居家居住', '交通出行', '形象与消费', '兴趣与成长', '社交关系', '健康与医疗', '职场工作', '金融理财', '其他类型'];
+
+  private markGroupIsUserCreated(groups: UserCategoryGroup[]) {
+    for (const group of groups) {
+      group.isUserCreated = !this.defaultGroupNames.includes(group.name);
+    }
+  }
+
   async getUserGroups(userId: number): Promise<UserCategoryGroup[]> {
-    return this.userGroupModel.find({
+    const groups = await this.userGroupModel.find({
       where: { userId, isEnabled: true },
       order: { sortOrder: 'ASC' },
     });
+    this.markGroupIsUserCreated(groups);
+    return groups;
   }
 
   async addUserGroup(
@@ -167,6 +177,7 @@ export class UserService {
       name: data.name,
       sortOrder: data.sortOrder || 0,
       isEnabled: true,
+      isUserCreated: true,
     });
 
     return this.userGroupModel.save(group);

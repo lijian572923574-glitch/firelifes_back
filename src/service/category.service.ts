@@ -215,11 +215,13 @@ export class CategoryService {
       where: { userId, isEnabled: true },
       order: { sortOrder: 'ASC' },
     });
+    this.markGroupIsUserCreated(userGroups);
     const userCategories = await this.customizationModel.find({
       where: { userId, type, isEnabled: true },
       relations: ['icon'],
       order: { sortOrder: 'ASC' },
     });
+    this.markCategoryIsUserCreated(userCategories);
 
     const result = userGroups
       .map(userGroup => {
@@ -275,6 +277,7 @@ export class CategoryService {
           name: group.name,
           sortOrder: group.sortOrder,
           isEnabled: true,
+          isUserCreated: false,
         });
         userGroupEntities.push(userGroup);
       }
@@ -354,14 +357,40 @@ export class CategoryService {
     }
   }
 
+  private defaultGroupNames = ['饮食消费', '居家居住', '交通出行', '形象与消费', '兴趣与成长', '社交关系', '健康与医疗', '职场工作', '金融理财', '其他类型'];
+
+  private defaultCategoryNames = ['餐饮', '饮料', '水果', '零食', '咖啡', '住房', '居家', '维修', '快递', '交通', '汽车', '服饰', '美发', '美容', '购物', '运动', '健身', '旅行', '书籍', '学习', '娱乐', '电影', '音乐', '游戏', '社交', '礼物', '礼金', '亲友', '宠物', '医疗', '办公', '通讯', '投资', '彩票', '其他', '日用', '捐赠', '工资', '奖金', '投资收入', '兼职', '理财', '报销', '礼金收入', '其他收入'];
+
+  private markGroupIsUserCreated(groups: UserCategoryGroup[]) {
+    for (const group of groups) {
+      group.isUserCreated = !this.defaultGroupNames.includes(group.name);
+    }
+  }
+
+  private markCategoryIsUserCreated(categories: UserCategoryCustomization[]) {
+    for (const category of categories) {
+      category.isUserCreated = !this.defaultCategoryNames.includes(category.name);
+    }
+  }
+
   async getUserGroups(userId: number) {
-    return this.userCategoryGroupModel.find({
+    const groups = await this.userCategoryGroupModel.find({
       where: { userId, isEnabled: true },
       order: { sortOrder: 'ASC' },
     });
+    this.markGroupIsUserCreated(groups);
+    return groups;
   }
 
   async createUserGroup(userId: number, data: { name: string }) {
+    // 检查分类组名称是否重复
+    const existingGroup = await this.userCategoryGroupModel.findOne({
+      where: { userId, name: data.name, isEnabled: true },
+    });
+    if (existingGroup) {
+      throw new Error('分类组名称已存在');
+    }
+
     const maxGroup = await this.userCategoryGroupModel.findOne({
       where: { userId },
       order: { sortOrder: 'DESC' },
@@ -373,7 +402,19 @@ export class CategoryService {
       name: data.name,
       sortOrder,
       isEnabled: true,
+      isUserCreated: true,
     });
+    return this.userCategoryGroupModel.save(group);
+  }
+
+  async toggleUserGroup(userId: number, id: number) {
+    const group = await this.userCategoryGroupModel.findOne({
+      where: { id, userId },
+    });
+    if (!group) {
+      throw new Error('分类不存在');
+    }
+    group.isEnabled = !group.isEnabled;
     return this.userCategoryGroupModel.save(group);
   }
 
@@ -384,6 +425,15 @@ export class CategoryService {
     if (!group) {
       throw new Error('分类不存在');
     }
+
+    // 检查分类组名称是否重复（排除当前分类组）
+    const existingGroup = await this.userCategoryGroupModel.findOne({
+      where: { userId, name: data.name, isEnabled: true },
+    });
+    if (existingGroup && existingGroup.id !== id) {
+      throw new Error('分类组名称已存在');
+    }
+
     group.name = data.name;
     return this.userCategoryGroupModel.save(group);
   }
@@ -394,6 +444,10 @@ export class CategoryService {
     });
     if (!group) {
       throw new Error('分类不存在');
+    }
+
+    if (this.defaultGroupNames.includes(group.name)) {
+      throw new Error('默认分类不允许删除，只能禁用');
     }
 
     const childCategories = await this.customizationModel.count({
@@ -411,17 +465,27 @@ export class CategoryService {
    * 获取指定大类下的子分类列表
    */
   async getCategoriesByGroup(userId: number, groupId: number) {
-    return this.customizationModel.find({
+    const categories = await this.customizationModel.find({
       where: { userId, groupId, isEnabled: true },
       relations: ['icon'],
       order: { sortOrder: 'ASC' },
     });
+    this.markCategoryIsUserCreated(categories);
+    return categories;
   }
 
   /**
    * 创建子分类
    */
   async createCategory(userId: number, data: { name: string; groupId: number; iconId: number; type: 'income' | 'expense' }) {
+    // 检查子分类名称是否重复（在同一个分类组下）
+    const existingCategory = await this.customizationModel.findOne({
+      where: { userId, groupId: data.groupId, name: data.name, isEnabled: true },
+    });
+    if (existingCategory) {
+      throw new Error('子分类名称已存在');
+    }
+
     const maxCategory = await this.customizationModel.findOne({
       where: { userId, groupId: data.groupId },
       order: { sortOrder: 'DESC' },
@@ -451,8 +515,28 @@ export class CategoryService {
     if (!category) {
       throw new Error('子分类不存在');
     }
+
+    // 检查子分类名称是否重复（在同一个分类组下，排除当前子分类）
+    const existingCategory = await this.customizationModel.findOne({
+      where: { userId, groupId: category.groupId, name: data.name, isEnabled: true },
+    });
+    if (existingCategory && existingCategory.id !== id) {
+      throw new Error('子分类名称已存在');
+    }
+
     category.name = data.name;
     category.iconId = data.iconId;
+    return this.customizationModel.save(category);
+  }
+
+  async toggleCategory(userId: number, id: number) {
+    const category = await this.customizationModel.findOne({
+      where: { id, userId },
+    });
+    if (!category) {
+      throw new Error('子分类不存在');
+    }
+    category.isEnabled = !category.isEnabled;
     return this.customizationModel.save(category);
   }
 
@@ -466,6 +550,12 @@ export class CategoryService {
     if (!category) {
       throw new Error('子分类不存在');
     }
+
+    // 检查是否是默认子分类
+    if (this.defaultCategoryNames.includes(category.name)) {
+      throw new Error('默认分类不允许删除，只能禁用');
+    }
+
     category.isEnabled = false;
     await this.customizationModel.save(category);
   }
