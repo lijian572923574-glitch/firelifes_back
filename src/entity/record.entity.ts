@@ -17,8 +17,14 @@ export class Record {
   @Column({ type: 'decimal', precision: 12, scale: 2, comment: '金额，正数为收入，负数为支出' })
   amount: number;
 
-  @Column({ length: 10, comment: '类型：income-收入，expense-支出' })
-  type: 'income' | 'expense';
+  @Column({ length: 20, comment: '类型：income-收入，expense-支出，transfer-转账，repayment-还债' })
+  type: 'income' | 'expense' | 'transfer' | 'repayment';
+
+  @Column({ name: 'account_id', type: 'int', nullable: true, comment: '账户ID，支出/收入时使用的账户，转账/还债时为转出账户' })
+  accountId?: number;
+
+  @Column({ name: 'to_account_id', type: 'int', nullable: true, comment: '转账时为转入账户ID，还债时为债权账户ID' })
+  toAccountId?: number;
 
   @Column({ nullable: true, length: 200, comment: '备注/说明' })
   remark: string;

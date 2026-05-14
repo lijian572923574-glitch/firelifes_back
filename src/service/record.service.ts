@@ -2,6 +2,7 @@ import { Provide } from '@midwayjs/core';
 import { InjectEntityModel } from '@midwayjs/typeorm';
 import { Repository } from 'typeorm';
 import { Record } from '../entity/record.entity';
+import { Account } from '../entity/account.entity';
 import { ICreateRecordOptions, IUpdateRecordOptions } from '../interface';
 
 export interface PageResult<T> {
@@ -16,10 +17,60 @@ export interface MonthSummary {
   expense: number;
 }
 
+/**
+ * 根据记账类型联动更新账户余额
+ * @returns 更新后的主账户余额
+ */
+function calculateAccountBalance(
+  account: Account,
+  toAccount: Account | null,
+  type: string,
+  amount: number
+): { accountBalance: number; toAccountBalance?: number } {
+  const absAmount = Math.abs(amount);
+
+  switch (type) {
+    case 'expense':
+      // 支出：账户余额减少
+      account.balance = Number(account.balance) - absAmount;
+      return { accountBalance: account.balance };
+
+    case 'income':
+      // 收入：账户余额增加
+      account.balance = Number(account.balance) + absAmount;
+      return { accountBalance: account.balance };
+
+    case 'transfer':
+      // 转账：转出账户减少，转入账户增加
+      account.balance = Number(account.balance) - absAmount;
+      if (toAccount) {
+        toAccount.balance = Number(toAccount.balance) + absAmount;
+        return { accountBalance: account.balance, toAccountBalance: toAccount.balance };
+      }
+      return { accountBalance: account.balance };
+
+    case 'repayment':
+      // 还债：还款账户（资产）减少，债权账户（负债）绝对值减少
+      account.balance = Number(account.balance) - absAmount;
+      if (toAccount) {
+        // 负债账户余额为负数（或0），还债后负债绝对值变小即余额变大（趋向0）
+        toAccount.balance = Number(toAccount.balance) + absAmount;
+        return { accountBalance: account.balance, toAccountBalance: toAccount.balance };
+      }
+      return { accountBalance: account.balance };
+
+    default:
+      return { accountBalance: account.balance };
+  }
+}
+
 @Provide()
 export class RecordService {
   @InjectEntityModel(Record)
   recordModel: Repository<Record>;
+
+  @InjectEntityModel(Account)
+  accountModel: Repository<Account>;
 
   async createRecord(options: ICreateRecordOptions): Promise<Record> {
     const record = this.recordModel.create({
@@ -28,9 +79,33 @@ export class RecordService {
       date: options.date,
       amount: options.amount,
       type: options.type,
+      accountId: options.accountId,
+      toAccountId: options.toAccountId,
       remark: options.remark || '',
     });
-    return this.recordModel.save(record);
+    const savedRecord = await this.recordModel.save(record);
+
+    // 联动更新账户余额
+    if (options.accountId) {
+      const account = await this.accountModel.findOne({
+        where: { id: options.accountId, userId: options.userId, isDeleted: false }
+      });
+      if (account) {
+        let toAccount: Account | null = null;
+        if (options.toAccountId) {
+          toAccount = await this.accountModel.findOne({
+            where: { id: options.toAccountId, userId: options.userId, isDeleted: false }
+          });
+        }
+        calculateAccountBalance(account, toAccount, options.type, options.amount);
+        await this.accountModel.save(account);
+        if (toAccount) {
+          await this.accountModel.save(toAccount);
+        }
+      }
+    }
+
+    return savedRecord;
   }
 
   async updateRecord(options: IUpdateRecordOptions): Promise<Record | null> {
@@ -44,6 +119,8 @@ export class RecordService {
     if (options.amount !== undefined) record.amount = options.amount;
     if (options.type !== undefined) record.type = options.type;
     if (options.remark !== undefined) record.remark = options.remark;
+    if (options.accountId !== undefined) record.accountId = options.accountId;
+    if (options.toAccountId !== undefined) record.toAccountId = options.toAccountId;
 
     return this.recordModel.save(record);
   }
@@ -114,6 +191,7 @@ export class RecordService {
       .addSelect('SUM(ABS(record.amount))', 'total')
       .where('record.userId = :userId', { userId })
       .andWhere('record.date BETWEEN :startDate AND :endDate', { startDate, endDate })
+      .andWhere('record.type IN (:...types)', { types: ['income', 'expense'] })
       .groupBy('record.type')
       .getRawMany();
 

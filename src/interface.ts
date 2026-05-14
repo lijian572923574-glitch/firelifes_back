@@ -13,7 +13,9 @@ export interface IRecord {
   typeId: number;
   date: string;
   amount: number;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer' | 'repayment';
+  accountId?: number;
+  toAccountId?: number;
   remark?: string;
 }
 
@@ -25,7 +27,9 @@ export interface ICreateRecordOptions {
   typeId: number;
   date: string;
   amount: number;
-  type: 'income' | 'expense';
+  type: 'income' | 'expense' | 'transfer' | 'repayment';
+  accountId?: number;
+  toAccountId?: number;
   remark?: string;
 }
 
@@ -37,6 +41,8 @@ export interface IUpdateRecordOptions {
   typeId?: number;
   date?: string;
   amount?: number;
-  type?: 'income' | 'expense';
+  type?: 'income' | 'expense' | 'transfer' | 'repayment';
+  accountId?: number;
+  toAccountId?: number;
   remark?: string;
 }
