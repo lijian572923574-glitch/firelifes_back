@@ -268,7 +268,7 @@ export class AccountService {
     return {
       account: transformAccount(account) as any,
       adjustment: {
-        ...adjustment,
+        ...adjustment as any,
         id: String(adjustment.id),
         userId: String(adjustment.userId),
         accountId: String(adjustment.accountId),
