@@ -12,6 +12,7 @@ import { UserIcon } from '../entity/user_icon.entity';
 import { SmsCode } from '../entity/sms_code.entity';
 import { Ad } from '../entity/ad.entity';
 import { Account } from '../entity/account.entity';
+import { DepreciatingAsset } from '../entity/depreciating_asset.entity';
 
 export default {
   keys: 'firelifes_local_dev_key_2024',
@@ -45,7 +46,7 @@ export default {
         schema: 'firelifes',
         synchronize: true,
         logging: true,
-        entities: [Record, Category, CategoryGroup, Icon, User, UserCategoryCustomization, UserCategoryGroup, UserIcon, SmsCode, Ad, Account],
+        entities: [Record, Category, CategoryGroup, Icon, User, UserCategoryCustomization, UserCategoryGroup, UserIcon, SmsCode, Ad, Account, DepreciatingAsset],
       },
     },
   },

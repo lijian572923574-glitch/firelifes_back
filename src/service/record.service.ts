@@ -3,6 +3,7 @@ import { InjectEntityModel } from '@midwayjs/typeorm';
 import { Repository } from 'typeorm';
 import { Record } from '../entity/record.entity';
 import { Account } from '../entity/account.entity';
+import { DepreciatingAsset } from '../entity/depreciating_asset.entity';
 import { ICreateRecordOptions, IUpdateRecordOptions } from '../interface';
 
 export interface PageResult<T> {
@@ -64,6 +65,19 @@ function calculateAccountBalance(
   }
 }
 
+function calculateMonthlyDepreciation(
+  purchasePrice: number,
+  residualValue: number,
+  lifeMonths: number,
+  method: string
+): number {
+  if (method === 'straight-line') {
+    return (purchasePrice - residualValue) / lifeMonths;
+  }
+  // double-declining-balance: 首月折旧 = purchasePrice * (2 / lifeMonths)
+  return purchasePrice * (2 / lifeMonths);
+}
+
 @Provide()
 export class RecordService {
   @InjectEntityModel(Record)
@@ -72,40 +86,73 @@ export class RecordService {
   @InjectEntityModel(Account)
   accountModel: Repository<Account>;
 
-  async createRecord(options: ICreateRecordOptions): Promise<Record> {
-    const record = this.recordModel.create({
-      userId: options.userId,
-      typeId: options.typeId,
-      date: options.date,
-      amount: options.amount,
-      type: options.type,
-      accountId: options.accountId,
-      toAccountId: options.toAccountId,
-      remark: options.remark || '',
-    });
-    const savedRecord = await this.recordModel.save(record);
+  @InjectEntityModel(DepreciatingAsset)
+  depreciatingAssetModel: Repository<DepreciatingAsset>;
 
-    // 联动更新账户余额
-    if (options.accountId) {
-      const account = await this.accountModel.findOne({
-        where: { id: options.accountId, userId: options.userId, isDeleted: false }
+  async createRecord(options: ICreateRecordOptions): Promise<Record> {
+    return this.recordModel.manager.transaction(async (manager) => {
+      const record = manager.create(Record, {
+        userId: options.userId,
+        typeId: options.typeId,
+        date: options.date,
+        amount: options.amount,
+        type: options.type,
+        accountId: options.accountId,
+        toAccountId: options.toAccountId,
+        remark: options.remark || '',
       });
-      if (account) {
-        let toAccount: Account | null = null;
-        if (options.toAccountId) {
-          toAccount = await this.accountModel.findOne({
-            where: { id: options.toAccountId, userId: options.userId, isDeleted: false }
-          });
-        }
-        calculateAccountBalance(account, toAccount, options.type, options.amount);
-        await this.accountModel.save(account);
-        if (toAccount) {
-          await this.accountModel.save(toAccount);
+      const savedRecord = await manager.save(record);
+
+      // 联动更新账户余额
+      if (options.accountId) {
+        const account = await manager.findOne(Account, {
+          where: { id: options.accountId, userId: options.userId, isDeleted: false }
+        });
+        if (account) {
+          let toAccount: Account | null = null;
+          if (options.toAccountId) {
+            toAccount = await manager.findOne(Account, {
+              where: { id: options.toAccountId, userId: options.userId, isDeleted: false }
+            });
+          }
+          calculateAccountBalance(account, toAccount, options.type, options.amount);
+          await manager.save(account);
+          if (toAccount) {
+            await manager.save(toAccount);
+          }
         }
       }
-    }
 
-    return savedRecord;
+      // 如果记入资产，事务内创建折旧资产
+      if (options.depreciatingAsset) {
+        const asset = options.depreciatingAsset;
+        const monthlyDepreciation = calculateMonthlyDepreciation(
+          asset.purchasePrice,
+          asset.residualValue,
+          asset.expectedLifeMonths,
+          asset.depreciationMethod
+        );
+
+        const depreciatingAsset = manager.create(DepreciatingAsset, {
+          userId: options.userId,
+          recordId: savedRecord.id,
+          name: asset.name,
+          category: asset.category as any,
+          depreciationMethod: asset.depreciationMethod as any,
+          purchasePrice: asset.purchasePrice,
+          purchaseDate: asset.purchaseDate,
+          expectedLifeMonths: asset.expectedLifeMonths,
+          residualValue: asset.residualValue,
+          currentValue: asset.purchasePrice,
+          monthlyDepreciation,
+          usedMonths: 0,
+          status: 'active',
+        });
+        await manager.save(depreciatingAsset);
+      }
+
+      return savedRecord;
+    });
   }
 
   async updateRecord(options: IUpdateRecordOptions): Promise<Record | null> {
@@ -207,5 +254,12 @@ export class RecordService {
     });
 
     return { income, expense };
+  }
+
+  async getDepreciatingAssets(userId: number): Promise<DepreciatingAsset[]> {
+    return this.depreciatingAssetModel.find({
+      where: { userId },
+      order: { createdAt: 'DESC' },
+    });
   }
 }

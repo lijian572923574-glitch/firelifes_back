@@ -1,6 +1,7 @@
 import { Inject, Controller, Post, Body, Put, Param, Get, Del, Query } from '@midwayjs/core';
 import type { Context } from '@midwayjs/koa';
 import { RecordService } from '../../service/record.service';
+import { NetWorthService } from '../../service/net-worth.service';
 import type { ICreateRecordOptions, IUpdateRecordOptions } from '../../interface';
 
 @Controller('/record')
@@ -10,6 +11,9 @@ export class RecordController {
 
   @Inject()
   recordService: RecordService;
+
+  @Inject()
+  netWorthService: NetWorthService;
 
   @Post('/')
   async createRecord(@Body() options: ICreateRecordOptions) {
@@ -100,6 +104,20 @@ export class RecordController {
     }
   }
 
+  @Get('/net-worth')
+  async getNetWorth() {
+    try {
+      const userId = (this.ctx.state.user as any)?.userId;
+      if (!userId) {
+        return { success: false, message: '用户未登录' };
+      }
+      const netWorth = await this.netWorthService.getNetWorth(userId);
+      return { success: true, message: '获取成功', data: netWorth };
+    } catch (error) {
+      return { success: false, message: '获取失败', error: error.message };
+    }
+  }
+
   @Get('/')
   async getAllRecords() {
     try {
@@ -176,6 +194,20 @@ export class RecordController {
         message: '更新失败',
         error: error.message,
       };
+    }
+  }
+
+  @Get('/depreciating-assets')
+  async getDepreciatingAssets() {
+    try {
+      const userId = (this.ctx.state.user as any)?.userId;
+      if (!userId) {
+        return { success: false, message: '用户未登录' };
+      }
+      const assets = await this.recordService.getDepreciatingAssets(userId);
+      return { success: true, message: '获取成功', data: assets };
+    } catch (error) {
+      return { success: false, message: '获取失败', error: error.message };
     }
   }
 

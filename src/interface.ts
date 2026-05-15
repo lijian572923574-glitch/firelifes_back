@@ -22,6 +22,16 @@ export interface IRecord {
 /**
  * @description Create record options
  */
+export interface ICreateRecordAssetOptions {
+  name: string;
+  category: string;
+  depreciationMethod: string;
+  purchasePrice: number;
+  purchaseDate: string;
+  expectedLifeMonths: number;
+  residualValue: number;
+}
+
 export interface ICreateRecordOptions {
   userId: number;
   typeId: number;
@@ -31,6 +41,7 @@ export interface ICreateRecordOptions {
   accountId?: number;
   toAccountId?: number;
   remark?: string;
+  depreciatingAsset?: ICreateRecordAssetOptions;
 }
 
 /**
