@@ -18,6 +18,19 @@ export interface MonthSummary {
   expense: number;
 }
 
+export interface YearlySummary {
+  totalIncome: number;
+  totalExpense: number;
+  totalBalance: number;
+}
+
+export interface YearlyBill {
+  year: number;
+  income: number;
+  expense: number;
+  balance: number;
+}
+
 /**
  * 根据记账类型联动更新账户余额
  * @returns 更新后的主账户余额
@@ -314,5 +327,70 @@ export class RecordService {
 
   async updateDepreciatingAsset(id: number, data: Partial<DepreciatingAsset>): Promise<void> {
     await this.depreciatingAssetModel.update(id, data);
+  }
+
+  async getYearlySummary(userId: number): Promise<YearlySummary> {
+    const result = await this.recordModel
+      .createQueryBuilder('record')
+      .select('record.type', 'type')
+      .addSelect('SUM(ABS(record.amount))', 'total')
+      .where('record.userId = :userId', { userId })
+      .andWhere('record.type IN (:...types)', { types: ['income', 'expense'] })
+      .groupBy('record.type')
+      .getRawMany();
+
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    result.forEach((row: any) => {
+      if (row.type === 'income') {
+        totalIncome = parseFloat(row.total) || 0;
+      } else if (row.type === 'expense') {
+        totalExpense = parseFloat(row.total) || 0;
+      }
+    });
+
+    return {
+      totalIncome: Math.round(totalIncome * 100) / 100,
+      totalExpense: Math.round(totalExpense * 100) / 100,
+      totalBalance: Math.round((totalIncome - totalExpense) * 100) / 100,
+    };
+  }
+
+  async getYearlyBills(userId: number): Promise<YearlyBill[]> {
+    const result = await this.recordModel
+      .createQueryBuilder('record')
+      .select("strftime('%Y', record.date)", 'year')
+      .addSelect('record.type', 'type')
+      .addSelect('SUM(ABS(record.amount))', 'total')
+      .where('record.userId = :userId', { userId })
+      .andWhere('record.type IN (:...types)', { types: ['income', 'expense'] })
+      .groupBy("strftime('%Y', record.date), record.type")
+      .orderBy("strftime('%Y', record.date)", 'DESC')
+      .getRawMany();
+
+    const yearMap = new Map<number, { income: number; expense: number }>();
+
+    result.forEach((row: any) => {
+      const year = parseInt(row.year);
+      if (!yearMap.has(year)) {
+        yearMap.set(year, { income: 0, expense: 0 });
+      }
+      const entry = yearMap.get(year)!;
+      if (row.type === 'income') {
+        entry.income = parseFloat(row.total) || 0;
+      } else if (row.type === 'expense') {
+        entry.expense = parseFloat(row.total) || 0;
+      }
+    });
+
+    return Array.from(yearMap.entries())
+      .map(([year, data]) => ({
+        year,
+        income: Math.round(data.income * 100) / 100,
+        expense: Math.round(data.expense * 100) / 100,
+        balance: Math.round((data.income - data.expense) * 100) / 100,
+      }))
+      .sort((a, b) => b.year - a.year);
   }
 }

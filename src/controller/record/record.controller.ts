@@ -225,6 +225,34 @@ export class RecordController {
     }
   }
 
+  @Get('/yearly-summary')
+  async getYearlySummary() {
+    try {
+      const userId = (this.ctx.state.user as any)?.userId;
+      if (!userId) {
+        return { success: false, message: '用户未登录' };
+      }
+      const summary = await this.recordService.getYearlySummary(userId);
+      return { success: true, message: '获取成功', data: summary };
+    } catch (error) {
+      return { success: false, message: '获取失败', error: error.message };
+    }
+  }
+
+  @Get('/yearly-bills')
+  async getYearlyBills() {
+    try {
+      const userId = (this.ctx.state.user as any)?.userId;
+      if (!userId) {
+        return { success: false, message: '用户未登录' };
+      }
+      const bills = await this.recordService.getYearlyBills(userId);
+      return { success: true, message: '获取成功', data: bills };
+    } catch (error) {
+      return { success: false, message: '获取失败', error: error.message };
+    }
+  }
+
   @Del('/:id')
   async deleteRecord(@Param('id') id: string) {
     try {
