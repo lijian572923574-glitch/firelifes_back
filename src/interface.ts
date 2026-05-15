@@ -56,4 +56,5 @@ export interface IUpdateRecordOptions {
   accountId?: number;
   toAccountId?: number;
   remark?: string;
+  depreciatingAsset?: ICreateRecordAssetOptions;
 }

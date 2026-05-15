@@ -211,6 +211,20 @@ export class RecordController {
     }
   }
 
+  @Get('/depreciating-asset/:recordId')
+  async getDepreciatingAssetByRecordId(@Param('recordId') recordId: string) {
+    try {
+      const userId = (this.ctx.state.user as any)?.userId;
+      if (!userId) {
+        return { success: false, message: '用户未登录' };
+      }
+      const asset = await this.recordService.getDepreciatingAssetByRecordId(parseInt(recordId));
+      return { success: true, data: asset };
+    } catch (error) {
+      return { success: false, message: '获取失败', error: error.message };
+    }
+  }
+
   @Del('/:id')
   async deleteRecord(@Param('id') id: string) {
     try {

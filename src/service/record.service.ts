@@ -169,7 +169,52 @@ export class RecordService {
     if (options.accountId !== undefined) record.accountId = options.accountId;
     if (options.toAccountId !== undefined) record.toAccountId = options.toAccountId;
 
-    return this.recordModel.save(record);
+    const savedRecord = await this.recordModel.save(record);
+
+    if (options.depreciatingAsset) {
+      const asset = options.depreciatingAsset;
+      const existing = await this.depreciatingAssetModel.findOne({
+        where: { recordId: options.id }
+      });
+
+      const monthlyDepreciation = calculateMonthlyDepreciation(
+        asset.purchasePrice,
+        asset.residualValue,
+        asset.expectedLifeMonths,
+        asset.depreciationMethod
+      );
+
+      if (existing) {
+        existing.name = asset.name;
+        existing.category = asset.category as any;
+        existing.depreciationMethod = asset.depreciationMethod as any;
+        existing.purchasePrice = asset.purchasePrice;
+        existing.purchaseDate = asset.purchaseDate;
+        existing.expectedLifeMonths = asset.expectedLifeMonths;
+        existing.residualValue = asset.residualValue;
+        existing.monthlyDepreciation = monthlyDepreciation;
+        await this.depreciatingAssetModel.save(existing);
+      } else {
+        const newAsset = this.depreciatingAssetModel.create({
+          userId: record.userId,
+          recordId: savedRecord.id,
+          name: asset.name,
+          category: asset.category as any,
+          depreciationMethod: asset.depreciationMethod as any,
+          purchasePrice: asset.purchasePrice,
+          purchaseDate: asset.purchaseDate,
+          expectedLifeMonths: asset.expectedLifeMonths,
+          residualValue: asset.residualValue,
+          currentValue: asset.purchasePrice,
+          monthlyDepreciation,
+          usedMonths: 0,
+          status: 'active',
+        });
+        await this.depreciatingAssetModel.save(newAsset);
+      }
+    }
+
+    return savedRecord;
   }
 
   async getRecordById(id: number): Promise<Record | null> {
@@ -261,5 +306,13 @@ export class RecordService {
       where: { userId },
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async getDepreciatingAssetByRecordId(recordId: number): Promise<DepreciatingAsset | null> {
+    return this.depreciatingAssetModel.findOne({ where: { recordId } });
+  }
+
+  async updateDepreciatingAsset(id: number, data: Partial<DepreciatingAsset>): Promise<void> {
+    await this.depreciatingAssetModel.update(id, data);
   }
 }
